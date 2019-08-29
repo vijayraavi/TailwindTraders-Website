@@ -1,10 +1,7 @@
-using System.Data.SqlClient;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Dapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using Tailwind.Traders.Web.Standalone.Models;
 
 namespace Tailwind.Traders.Web.Standalone.Controllers
@@ -13,58 +10,22 @@ namespace Tailwind.Traders.Web.Standalone.Controllers
     [Route("api/v1/[controller]")]
     public class ProductsController : Controller
     {
-        private readonly SqlConnection sqlConnection;
-        private readonly string productImagesUrl;
+        private readonly IProductService productService;
+        private readonly IImageSearchService imageSearchService;
 
-        public ProductsController(SqlConnection sqlConnection, IOptions<Settings> settings)
+        public ProductsController(
+            IProductService productService,
+            IImageSearchService imageSearchService)
         {
-            this.sqlConnection = sqlConnection;
-            
-            var basePath = settings.Value.ProductImagesUrl;
-            productImagesUrl = string.IsNullOrEmpty(basePath) ? 
-                "https://tailwindtraders.blob.core.windows.net/product-detail" :
-                basePath;
+            this.productService = productService;
+            this.imageSearchService = imageSearchService;
         }
 
         [HttpGet("{id}")]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public async Task<IActionResult> GetProductDetails([FromRoute] int id)
         {
-            await sqlConnection.OpenAsync();
-            var results = await sqlConnection.QueryAsync<Product, ProductBrand, ProductType, Product>(@"
-                SELECT p.Id
-                    ,p.Name
-                    ,Price
-                    ,ImageName as ImageUrl
-                    ,BrandId
-                    ,TypeId
-                    ,TagId
-                    ,b.Id
-                    ,b.Name
-                    ,t.Id
-                    ,t.Code
-                    ,t.Name
-                FROM Products as p
-                INNER JOIN Brands as b ON p.BrandId = b.Id
-                INNER JOIN Types as t ON p.TypeId = t.Id
-                WHERE p.Id = @Id
-            ", (p, b, t) =>
-            {
-                p.Brand = b;
-                p.Type = t;
-                p.ImageUrl = $"{productImagesUrl}/{p.ImageUrl}";
-                return p;
-            }, new { Id = id });
-
-            var product = results.FirstOrDefault();
-
-            if (product != null)
-            {
-                product.Features = await sqlConnection.QueryAsync<ProductFeature>(@"
-                    SELECT * FROM Features WHERE ProductItemId = @Id
-                ", new { Id = id });
-            }
-
+            var product = await productService.GetProduct(id);
             return Ok(product);
         }
 
@@ -72,56 +33,15 @@ namespace Tailwind.Traders.Web.Standalone.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public async Task<IActionResult> GetProducts([FromQuery] int[] brand = null, [FromQuery] string[] type = null)
         {
-            await sqlConnection.OpenAsync();
-            var products = await sqlConnection.QueryAsync<Product, ProductBrand, ProductType, Product>(@"
-                SELECT p.Id
-                    ,p.Name
-                    ,Price
-                    ,ImageName as ImageUrl
-                    ,BrandId
-                    ,TypeId
-                    ,TagId
-                    ,b.Id
-                    ,b.Name
-                    ,t.Id
-                    ,t.Code
-                    ,t.Name
-                FROM Products as p
-                INNER JOIN Brands as b ON p.BrandId = b.Id
-                INNER JOIN Types as t ON p.TypeId = t.Id
-                WHERE t.Code IN @TypeCodes OR b.Id IN @BrandIds
-            ", (p, b, t) =>
-            {
-                p.Brand = b;
-                p.Type = t;
-                p.ImageUrl = $"{productImagesUrl}/{p.ImageUrl}";
-                return p;
-            }, new
-            {
-                TypeCodes = type,
-                BrandIds = brand
-            });
+            var products = await productService.GetProducts(brand, type);
+            var types = await productService.GetTypes();
+            var brands = await productService.GetBrands();
 
-            var brands = await sqlConnection.QueryAsync<ProductBrand>(@"
-                SELECT 
-                    b.Id
-                    ,b.Name
-                FROM Brands as b
-            ");
-
-            var types = await sqlConnection.QueryAsync<ProductType>(@"
-                SELECT 
-                    t.Id
-                    ,t.Code
-                    ,t.Name
-                FROM Types as t
-            ");
-
-            return Ok(new
+            return Ok(new ProductList
             {
-                brands,
-                types,
-                products
+                Brands = brands,
+                Types = types,
+                Products = products
             });
         }
 
@@ -129,6 +49,14 @@ namespace Tailwind.Traders.Web.Standalone.Controllers
         public IActionResult GetPopularProducts()
         {
             return Ok(new object[] {});
+        }
+
+        [HttpPost("imageclassifier")]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        public async Task<IActionResult> PostImage(IFormFile file)
+        {
+            var products = await imageSearchService.GetProducts(file.OpenReadStream());
+            return Ok(products);
         }
     }
 }
