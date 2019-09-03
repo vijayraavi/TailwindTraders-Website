@@ -24,24 +24,25 @@ namespace Tailwind.Traders.Web.Standalone.Services
         {
             this.logger = logger;
             logger.LogInformation("ctor");
-            engine = LoadModel(
-                Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx"));
+            // engine = LoadModel(
+            //     Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx"));
         }
 
         public Task<string> PredictSearchTerm(Stream imageStream)
         {
-            DenseTensor<float> data = ConvertImageToTensor(imageStream);
-            var input = new ImageInput { Data = data.ToArray() };
-            ImagePrediction output;
+            // DenseTensor<float> data = ConvertImageToTensor(imageStream);
+            // var input = new ImageInput { Data = data.ToArray() };
+            // ImagePrediction output;
 
-            logger.LogInformation("predict");
-            // TODO: Figure out if Predict is thread-safe
-            lock (engine)
-            {
-                output = engine.Predict(input);
-            }
-            var prediction = output.Prediction.FirstOrDefault();
-            logger.LogInformation(prediction);
+            // logger.LogInformation("predict");
+            // // TODO: Figure out if Predict is thread-safe
+            // lock (engine)
+            // {
+            //     output = engine.Predict(input);
+            // }
+            // var prediction = output.Prediction.FirstOrDefault();
+            // logger.LogInformation(prediction);
+            var prediction = "hammer";
             return Task.FromResult(prediction);
         }
 
