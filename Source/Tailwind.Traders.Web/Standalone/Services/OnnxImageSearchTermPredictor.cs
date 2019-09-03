@@ -31,13 +31,14 @@ namespace Tailwind.Traders.Web.Standalone.Services
 
         public Task<string> PredictSearchTerm(Stream imageStream)
         {
-            DenseTensor<float> data = ConvertImageToTensor(imageStream);
-            var input = NamedOnnxValue.CreateFromTensor<float>("data", data);
-            using (var output = session.Run(new[] { input }))
-            {
-                var prediction = output.First(i => i.Name == "classLabel").AsEnumerable<string>().First();
-                return Task.FromResult(prediction);
-            }
+            // DenseTensor<float> data = ConvertImageToTensor(imageStream);
+            // var input = NamedOnnxValue.CreateFromTensor<float>("data", data);
+            // using (var output = session.Run(new[] { input }))
+            // {
+            //     var prediction = output.First(i => i.Name == "classLabel").AsEnumerable<string>().First();
+            //     return Task.FromResult(prediction);
+            // }
+            return Task.FromResult("hammer");
         }
 
         private DenseTensor<float> ConvertImageToTensor(Stream imageStream)
