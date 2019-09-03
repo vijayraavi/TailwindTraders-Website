@@ -24,8 +24,8 @@ namespace Tailwind.Traders.Web.Standalone.Services
         {
             this.logger = logger;
             logger.LogInformation("ctor");
-            // engine = LoadModel(
-            //     Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx"));
+            engine = LoadModel(
+                Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx"));
         }
 
         public Task<string> PredictSearchTerm(Stream imageStream)
