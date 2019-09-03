@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML;
 using Microsoft.ML.Data;
+using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.Transforms.Onnx;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Advanced;
@@ -24,8 +25,9 @@ namespace Tailwind.Traders.Web.Standalone.Services
         {
             this.logger = logger;
             logger.LogInformation("ctor");
-            engine = LoadModel(
-                Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx"));
+            // engine = LoadModel(
+            //     Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx"));
+            var session = new InferenceSession(Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx"));
         }
 
         public Task<string> PredictSearchTerm(Stream imageStream)
