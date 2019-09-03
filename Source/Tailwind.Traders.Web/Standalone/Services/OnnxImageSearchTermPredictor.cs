@@ -18,40 +18,32 @@ namespace Tailwind.Traders.Web.Standalone.Services
 {
     public class OnnxImageSearchTermPredictor : IImageSearchTermPredictor
     {
-        private readonly PredictionEngine<ImageInput, ImagePrediction> engine;
         private readonly ILogger<OnnxImageSearchTermPredictor> logger;
+        private readonly InferenceSession session;
 
         public OnnxImageSearchTermPredictor(IHostingEnvironment environment, ILogger<OnnxImageSearchTermPredictor> logger)
         {
             this.logger = logger;
             logger.LogInformation("ctor");
-            // engine = LoadModel(
-            //     Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx"));
-            var session = new InferenceSession(Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx"));
+            var file = System.IO.File.ReadAllBytes(Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx"));
+            //session = new InferenceSession(Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx"));
         }
 
         public Task<string> PredictSearchTerm(Stream imageStream)
         {
-            // DenseTensor<float> data = ConvertImageToTensor(imageStream);
-            // var input = new ImageInput { Data = data.ToArray() };
-            // ImagePrediction output;
-
-            // logger.LogInformation("predict");
-            // // TODO: Figure out if Predict is thread-safe
-            // lock (engine)
-            // {
-            //     output = engine.Predict(input);
-            // }
-            // var prediction = output.Prediction.FirstOrDefault();
-            // logger.LogInformation(prediction);
-            var prediction = "hammer";
-            return Task.FromResult(prediction);
+            DenseTensor<float> data = ConvertImageToTensor(imageStream);
+            var input = NamedOnnxValue.CreateFromTensor<float>("data", data);
+            using (var output = session.Run(new[] { input }))
+            {
+                var prediction = output.First(i => i.Name == "classLabel").AsEnumerable<string>().First();
+                return Task.FromResult(prediction);
+            }
         }
 
         private DenseTensor<float> ConvertImageToTensor(Stream imageStream)
         {
             logger.LogInformation("ConvertImageToTensor");
-            var data = new DenseTensor<float>(new[] { 3, 224, 224 });
+            var data = new DenseTensor<float>(new[] { 1, 3, 224, 224 });
             using (var image = Image.Load(imageStream))
             {
                 image.Mutate(ctx => ctx.Resize(new ResizeOptions
@@ -64,13 +56,12 @@ namespace Tailwind.Traders.Web.Standalone.Services
                     for (var y = 0; y < image.Height; y++)
                     {
                         var color = image.GetPixelRowSpan(y)[x];
-                        data[0, x, y] = color.B;
-                        data[1, x, y] = color.G;
-                        data[2, x, y] = color.R;
+                        data[0, 0, x, y] = color.B;
+                        data[0, 1, x, y] = color.G;
+                        data[0, 2, x, y] = color.R;
                     }
                 }
             }
-
             return data;
         }
 
