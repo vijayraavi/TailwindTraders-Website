@@ -25,20 +25,20 @@ namespace Tailwind.Traders.Web.Standalone.Services
         {
             this.logger = logger;
             logger.LogInformation("ctor");
-            var file = System.IO.File.ReadAllBytes(Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx"));
-            //session = new InferenceSession(Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx"));
+            var filePath = Path.Combine(environment.ContentRootPath, "Standalone/OnnxModels/products.onnx");
+            // var file = System.IO.File.ReadAllBytes(filePath);
+            session = new InferenceSession(filePath);
         }
 
         public Task<string> PredictSearchTerm(Stream imageStream)
         {
-            // DenseTensor<float> data = ConvertImageToTensor(imageStream);
-            // var input = NamedOnnxValue.CreateFromTensor<float>("data", data);
-            // using (var output = session.Run(new[] { input }))
-            // {
-            //     var prediction = output.First(i => i.Name == "classLabel").AsEnumerable<string>().First();
-            //     return Task.FromResult(prediction);
-            // }
-            return Task.FromResult("hammer");
+            DenseTensor<float> data = ConvertImageToTensor(imageStream);
+            var input = NamedOnnxValue.CreateFromTensor<float>("data", data);
+            using (var output = session.Run(new[] { input }))
+            {
+                var prediction = output.First(i => i.Name == "classLabel").AsEnumerable<string>().First();
+                return Task.FromResult(prediction);
+            }
         }
 
         private DenseTensor<float> ConvertImageToTensor(Stream imageStream)
